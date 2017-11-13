@@ -384,3 +384,6 @@ class SegNet():
             im = gdal.Open(geo_file)
             writeTiff(im_arr1, 15106, 4000, 1, tif_file_out, [0, 12, 0, 0, 0, -12], im.GetProjection())
             #writeTiff(im_arr1, 15106, 4000, 1, tif_file_out, im.GetGeoTransform, im.GetProjection())
+        else:
+            write_tiff(tif_file_out, im_arr1, 15106, 4000, 1)
+
