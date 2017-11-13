@@ -14,7 +14,7 @@ This file is make train file and test file,here is the step:
 
 
 # Requirements
-python 2.7
+python 2.7 <br/>
 tensorflow 1.2 - GPU
 gdal
 
