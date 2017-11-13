@@ -1,0 +1,35 @@
+# -*- coding: utf8 -*-
+import tensorflow as tf
+
+
+def read_bacth_multifile(filein_path, bacth_size):
+    reader = tf.TFRecordReader()
+    files = tf.train.match_filenames_once(filein_path)
+
+    filename_queue = tf.train.string_input_producer(files)
+    _, queue_batch = reader.read_up_to(filename_queue, bacth_size)
+    features = tf.parse_example(queue_batch, features={
+        'img_raw': tf.FixedLenFeature([], tf.string),
+    })
+
+    imgs = tf.decode_raw(features['img_raw'], tf.float32)
+    images_bacth = tf.reshape(imgs, (bacth_size, 224, 224, 8))
+
+    return files, images_bacth
+
+
+def read_batch(filename, batch_size):
+    file_queue = tf.train.string_input_producer([filename])
+    reader = tf.TFRecordReader()
+    _, queue_batch = reader.read_up_to(file_queue, batch_size)
+    feature = tf.parse_example(queue_batch, features={
+        'img_raw': tf.FixedLenFeature([], tf.string),
+        'label': tf.FixedLenFeature([], tf.string)
+    })
+    imgs = tf.decode_raw(feature['img_raw'], tf.float32)
+    labels = tf.decode_raw(feature['label'], tf.int32)
+
+    img_batch = tf.reshape(imgs, (batch_size, 224, 224, 8))
+    label_batch = tf.reshape(labels, (batch_size, 224, 224))
+
+    return img_batch, label_batch
