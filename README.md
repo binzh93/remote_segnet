@@ -9,9 +9,9 @@ tensorflow 1.2 - GPU <br/>
 gdal <br/>
 
 # datamake.py
-This file makes train file and test file,here is the step:
-1.split a big image save in a path
-2.
+This file makes train file and test file,here is the step: <br/>
+1.split a big image save in a path <br/>
+2.make tfrecords file to train and predict
 
 # model.py 
 This file trains network and prediction the result
