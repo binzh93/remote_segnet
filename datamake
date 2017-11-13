@@ -1,0 +1,247 @@
+# -*- coding: utf8 -*-
+import tensorflow as tf
+import numpy as np
+import gdal
+
+
+# no geo information
+def write_tiff(file_outpath, input_arr, out_width, out_height, out_band):
+    driver = gdal.GetDriverByName("GTiff")
+    dst_ds = driver.Create(file_outpath, out_width, out_height, out_band, gdal.GDT_UInt16)
+    if out_band == 1:
+        dst_ds.GetRasterBand(1).WriteArray(input_arr)
+    elif out_band > 1:
+        for i in range(out_band):
+            dst_ds.GetRasterBand(i + 1).WriteArray(input_arr[i])
+
+
+# carry geo information
+def writeTiff(im_data, im_width, im_height, im_bands, path, im_geotrans=None, im_proj=None):
+    if 'int8' in im_data.dtype.name:
+        datatype = gdal.GDT_Byte
+    elif 'int16' in im_data.dtype.name:
+        datatype = gdal.GDT_UInt16
+    else:
+        datatype = gdal.GDT_Float32
+    '''
+    if len(im_data.shape) == 3:
+        im_bands, im_height, im_width = im_data.shape
+    else:
+        im_bands, (im_height, im_width) = 1, im_data.shape
+    '''
+    # 创建文件
+    driver = gdal.GetDriverByName("GTiff")
+    dataset = driver.Create(path, im_width, im_height, im_bands, datatype)
+    if (dataset != None) & (im_geotrans != None) & (im_proj != None):
+        dataset.SetGeoTransform(im_geotrans)  # 写入仿射变换参数
+        dataset.SetProjection(im_proj)  # 写入投影
+    if im_bands == 1:
+        for i in range(im_bands):
+            dataset.GetRasterBand(i + 1).WriteArray(im_data)
+    else:
+        for i in range(im_bands):
+            dataset.GetRasterBand(i + 1).WriteArray(im_data[i])
+    del dataset
+
+
+# split feature img
+def adaptive_split_img(filein, split_img_path, split_size):
+    img = gdal.Open(filein)
+
+    # (4, 5106, 15106)
+    width = img.RasterXSize
+    height = img.RasterYSize
+
+    rows = height / split_size + 1  # hang
+    cols = width / split_size + 1  # lie
+
+    nums = 0
+    for i in range(rows):
+        for j in range(cols):
+            if (i == rows - 1) and (j != cols - 1):
+                yheight = height - split_size * i
+
+                arr = img.ReadAsArray(xoff=j * split_size, yoff=i * split_size, xsize=split_size, ysize=yheight)
+                zero_arr = np.zeros((4, split_size - yheight, split_size))
+                tmp_arr = np.concatenate((arr, zero_arr), axis=1)
+
+                filename = split_img_path + str(nums) + '.tif'
+                write_tiff(filename, tmp_arr, split_size, split_size, 4)
+                nums += 1
+
+            elif (j == cols - 1) and (i != rows - 1):
+                xwidth = width - split_size * j
+
+                arr = img.ReadAsArray(xoff=j * split_size, yoff=i * split_size, xsize=xwidth, ysize=split_size)
+                zero_arr = np.zeros((4, split_size, split_size - xwidth))
+                tmp_arr = np.concatenate((arr, zero_arr), axis=2)
+
+                filename = split_img_path + str(nums) + '.tif'
+                write_tiff(filename, tmp_arr, split_size, split_size, 4)
+                nums += 1
+
+            elif (i == rows - 1) and (j == cols - 1):
+                xwidth = width - split_size * j
+                yheight = height - split_size * i
+
+                zero_arr1 = np.zeros((4, yheight, split_size - xwidth))
+                zero_arr2 = np.zeros((4, split_size - yheight, split_size))
+                arr = img.ReadAsArray(xoff=j * split_size, yoff=i * split_size, xsize=xwidth, ysize=yheight)
+                arr1 = np.concatenate((arr, zero_arr1), axis=2)
+                tmp_arr = np.concatenate((arr1, zero_arr2), axis=1)
+
+                filename = split_img_path + str(nums) + '.tif'
+                write_tiff(filename, tmp_arr, split_size, split_size, 4)
+                nums += 1
+
+            else:
+                split_arr = img.ReadAsArray(xoff=j * split_size, yoff=i * split_size, xsize=split_size,
+                                            ysize=split_size)
+                filename = split_img_path + str(nums) + '.tif'
+                write_tiff(filename, split_arr, split_size, split_size, 4)
+                nums += 1
+
+# split label img
+def adaptive_split_label(filein, split_label_path, split_size):
+    img = gdal.Open(filein)
+
+    # (5106, 15106)
+    width = img.RasterXSize
+    height = img.RasterYSize
+
+    rows = height / split_size + 1  # hang
+    cols = width / split_size + 1  # lie
+
+    nums = 0
+    for i in range(rows):
+        for j in range(cols):
+            if (i == rows - 1) and (j != cols - 1):
+                yheight = height - split_size * i
+
+                arr = img.ReadAsArray(xoff=j * split_size, yoff=i * split_size, xsize=split_size, ysize=yheight)
+                zero_arr = np.zeros((split_size - yheight, split_size))
+                tmp_arr = np.concatenate((arr, zero_arr), axis=0)
+
+                filename = split_label_path + str(nums) + '.tif'
+                write_tiff(filename, tmp_arr, split_size, split_size, 1)
+                nums += 1
+
+            elif (j == cols - 1) and (i != rows - 1):
+                xwidth = width - split_size * j
+
+                arr = img.ReadAsArray(xoff=j * split_size, yoff=i * split_size, xsize=xwidth, ysize=split_size)
+                zero_arr = np.zeros((split_size, split_size - xwidth))
+                tmp_arr = np.concatenate((arr, zero_arr), axis=1)
+
+                filename = split_label_path + str(nums) + '.tif'
+                write_tiff(filename, tmp_arr, split_size, split_size, 1)
+                nums += 1
+
+            elif (i == rows - 1) and (j == cols - 1):
+                xwidth = width - split_size * j
+                yheight = height - split_size * i
+
+                zero_arr1 = np.zeros((yheight, split_size - xwidth))
+                zero_arr2 = np.zeros((split_size - yheight, split_size))
+                arr = img.ReadAsArray(xoff=j * split_size, yoff=i * split_size, xsize=xwidth, ysize=yheight)
+                arr1 = np.concatenate((arr, zero_arr1), axis=1)
+                tmp_arr = np.concatenate((arr1, zero_arr2), axis=0)
+
+                filename = split_label_path + str(nums) + '.tif'
+                write_tiff(filename, tmp_arr, split_size, split_size, 1)
+                nums += 1
+
+            else:
+                split_arr = img.ReadAsArray(xoff=j * split_size, yoff=i * split_size, xsize=split_size,
+                                            ysize=split_size)
+                filename = split_label_path + str(nums) + '.tif'
+                write_tiff(filename, split_arr, split_size, split_size, 1)
+                nums += 1
+
+
+def _bytes_features(value):
+    return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
+
+def make_train_file_tif_to_tfrecords(input_nums, file15_path, file17_path, label_path, tf_file_path):
+    write = tf.python_io.TFRecordWriter(tf_file_path)
+    for i in range(input_nums):
+        file15_name = file15_path + str(i) + '.tif'
+        file17_name = file17_path + str(i) + '.tif'
+        im15 = gdal.Open(file15_name)
+        im17 = gdal.Open(file17_name)
+        im15_arr = im15.ReadAsArray()
+        im17_arr = im17.ReadAsArray()
+        im_arr = np.concatenate((im15_arr, im17_arr), axis=0)
+        im_arr = np.array(im_arr, dtype='float32')
+        im_arr = np.transpose(im_arr, [1, 2, 0])
+
+        label_path_name = label_path + str(i) + '.tif'
+        label = gdal.Open(label_path_name)
+        label_arr = label.ReadAsArray()
+        for i in range(224):
+            for j in range(224):
+                if label_arr[i][j] <= 0:
+                    label_arr[i][j] = 0
+                else:
+                    label_arr[i][j] = 1
+        label_arr = np.array(label_arr, dtype='int32')
+
+        img_raw = im_arr.tostring()
+        label_str = label_arr.tostring()
+
+        example = tf.train.Example(features=tf.train.Features(feature={
+            'img_raw': _bytes_features(img_raw),
+            'label': _bytes_features(label_str)
+        }))
+
+        write.write(example.SerializeToString())
+    write.close()
+
+def make_test_file_tif_to_tfrecords(input_nums, file15_path, file17_path, tf_file_path):
+    write = tf.python_io.TFRecordWriter(tf_file_path)
+    for i in range(input_nums):
+        file15_name = file15_path + str(i) + '.tif'
+        file17_name = file17_path + str(i) + '.tif'
+        im15 = gdal.Open(file15_name)
+        im17 = gdal.Open(file17_name)
+        im15_arr = im15.ReadAsArray()
+        im17_arr = im17.ReadAsArray()
+        im_arr = np.concatenate((im15_arr, im17_arr), axis=0)
+        im_arr = np.array(im_arr, dtype='float32')
+        im_arr = np.transpose(im_arr, [1, 2, 0])
+
+        img_raw = im_arr.tostring()
+
+        example = tf.train.Example(features=tf.train.Features(feature={
+            'img_raw': _bytes_features(img_raw),
+        }))
+
+        write.write(example.SerializeToString())
+    write.close()
+
+
+def datamake_opeartion():
+    im15_path = ''
+    im17_path = ''
+    label_path = ''
+    split_im15_save_path = ''
+    split_im17_save_path = ''
+    split_label_path = ''
+    train_tf_path = ''
+    test_tf_path = ''
+    split_size = 224
+    input_nums = 1224 # need to modify
+    adaptive_split_img(im15_path, split_im15_save_path, split_size)
+    adaptive_split_img(im17_path, split_im17_save_path, split_size)
+    adaptive_split_label(label_path, split_label_path, split_size)
+    
+    make_train_file_tif_to_tfrecords(input_nums, split_im15_save_path, split_im17_save_path, split_label_path, train_tf_path)
+    make_test_file_tif_to_tfrecords(input_nums, split_im15_save_path, split_im17_save_path, test_tf_path)
+
+
+
+
+
+
+
+
