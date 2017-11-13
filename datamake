@@ -2,6 +2,7 @@
 import tensorflow as tf
 import numpy as np
 import gdal
+import os
 
 
 # no geo information
@@ -101,6 +102,7 @@ def adaptive_split_img(filein, split_img_path, split_size):
                 write_tiff(filename, split_arr, split_size, split_size, 4)
                 nums += 1
 
+
 # split label img
 def adaptive_split_label(filein, split_label_path, split_size):
     img = gdal.Open(filein)
@@ -162,6 +164,7 @@ def adaptive_split_label(filein, split_label_path, split_size):
 def _bytes_features(value):
     return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
 
+
 def make_train_file_tif_to_tfrecords(input_nums, file15_path, file17_path, label_path, tf_file_path):
     write = tf.python_io.TFRecordWriter(tf_file_path)
     for i in range(input_nums):
@@ -197,6 +200,7 @@ def make_train_file_tif_to_tfrecords(input_nums, file15_path, file17_path, label
         write.write(example.SerializeToString())
     write.close()
 
+
 def make_test_file_tif_to_tfrecords(input_nums, file15_path, file17_path, tf_file_path):
     write = tf.python_io.TFRecordWriter(tf_file_path)
     for i in range(input_nums):
@@ -221,24 +225,29 @@ def make_test_file_tif_to_tfrecords(input_nums, file15_path, file17_path, tf_fil
 
 
 def datamake_opeartion():
-    im15_path = ''
-    im17_path = ''
-    label_path = ''
-    split_im15_save_path = ''
-    split_im17_save_path = ''
-    split_label_path = ''
-    train_tf_path = ''
-    test_tf_path = ''
+    im15_path = 'quickbird2015.tif'
+    im17_path = 'quickbird2015.tif'
+    label_path = 'label.tif'
+    split_im15_save_path = 'split_im15/'
+    split_im17_save_path = 'split_im17/'
+    split_label_path = 'split_label/'
+    train_tf_path = 'train.tfrecords'
+    test_tf_path = 'test.tfrecords'
     split_size = 224
-    input_nums = 1224 # need to modify
+    input_nums = 1564 # need to modify
     adaptive_split_img(im15_path, split_im15_save_path, split_size)
     adaptive_split_img(im17_path, split_im17_save_path, split_size)
     adaptive_split_label(label_path, split_label_path, split_size)
-    
+
     make_train_file_tif_to_tfrecords(input_nums, split_im15_save_path, split_im17_save_path, split_label_path, train_tf_path)
     make_test_file_tif_to_tfrecords(input_nums, split_im15_save_path, split_im17_save_path, test_tf_path)
 
+if __name__ == '__main__':
+    os.chdir('')  # 将其设置为当前工作目录
+    # print(os.getcwd())         # 输出当前工作目录
+    datamake_opeartion()
 
+  
 
 
 
