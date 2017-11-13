@@ -372,18 +372,5 @@ class SegNet():
 
         tf.gfile.FastGFile(pre_file_out_path, 'wb').write(out_string)
 
-    # local run make the txt file for generate from the pai to tif file
-    def generate_tif_file_from_txt(self, txt_file_in, tif_file_out, geo_file=None):
-        txt_read = open(txt_file_in)
-        txt_data = txt_read.read()
-        im_arr = np.fromstring(txt_data, dtype='int32')
-        im_arr = im_arr.reshape(4032, 15232)  # recurrent split large image
-        im_arr1 = im_arr[0: 4000, 0: 15106]  # recurrent raw image
 
-        if geo_file:
-            im = gdal.Open(geo_file)
-            writeTiff(im_arr1, 15106, 4000, 1, tif_file_out, [0, 12, 0, 0, 0, -12], im.GetProjection())
-            #writeTiff(im_arr1, 15106, 4000, 1, tif_file_out, im.GetGeoTransform, im.GetProjection())
-        else:
-            write_tiff(tif_file_out, im_arr1, 15106, 4000, 1)
 
