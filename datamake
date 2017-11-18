@@ -226,7 +226,7 @@ def make_test_file_tif_to_tfrecords(input_nums, file15_path, file17_path, tf_fil
 
 def datamake_opeartion():
     im15_path = 'quickbird2015.tif'
-    im17_path = 'quickbird2015.tif'
+    im17_path = 'quickbird2017.tif'
     label_path = 'label.tif'
     split_im15_save_path = 'split_im15/'
     split_im17_save_path = 'split_im17/'
