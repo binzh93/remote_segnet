@@ -2,9 +2,7 @@
 import tensorflow as tf
 import numpy as np
 import time
-import gdal
 from Inputs import read_batch, read_bacth_multifile
-from datamake import write_tiff, writeTiff
 
 
 class SegNet():
