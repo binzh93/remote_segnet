@@ -1,0 +1,50 @@
+# -*- coding: utf8 -*-
+import gdal
+import os
+
+
+# carry geo information
+def writeTiff(im_data, im_width, im_height, im_bands, path, im_geotrans=None, im_proj=None):
+    if 'int8' in im_data.dtype.name:
+        datatype = gdal.GDT_Byte
+    elif 'int16' in im_data.dtype.name:
+        datatype = gdal.GDT_UInt16
+    else:
+        datatype = gdal.GDT_Float32
+    '''
+    if len(im_data.shape) == 3:
+        im_bands, im_height, im_width = im_data.shape
+    else:
+        im_bands, (im_height, im_width) = 1, im_data.shape
+    '''
+    # 创建文件
+    driver = gdal.GetDriverByName("GTiff")
+    dataset = driver.Create(path, im_width, im_height, im_bands, datatype)
+    if (dataset != None) & (im_geotrans != None) & (im_proj != None):
+        dataset.SetGeoTransform(im_geotrans)  # 写入仿射变换参数
+        dataset.SetProjection(im_proj)  # 写入投影
+    if im_bands == 1:
+        for i in range(im_bands):
+            dataset.GetRasterBand(i + 1).WriteArray(im_data)
+    else:
+        for i in range(im_bands):
+            dataset.GetRasterBand(i + 1).WriteArray(im_data[i])
+    del dataset
+
+
+
+
+os.chdir("/home/zb/Desktop/rematch_data")
+
+im15 = "quarterfinals_2015.tif"
+im17 = "quarterfinals_2017.tif"
+label = "label.tif"
+
+im15__ = gdal.Open(im15)
+im15_ = gdal.Open(im17)
+im15_arr = im15_.ReadAsArray(xoff=1100, yoff=260, xsize=3360, ysize=3584)
+
+
+writeTiff(im15_arr, 3360, 3584, 4, "im17.tif", im15__.GetGeoTransform(), im15__.GetProjection())
+
+
